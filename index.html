@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        #controls {
+            padding: 30px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            z-index: 2;
+        }
+
+        #controls.hidden {
+            display: none !important;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #countdown {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40vh;
+            font-weight: bold;
+            color: rgba(0,0,0,0.3);
+            user-select: none;
+            z-index: 1;
+        }
+
+        input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        label {
+            font-size: 16px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls" class="hidden">
+        <div class="input-group">
+            <label>间隔时间（秒）:</label>
+            <input type="number" id="interval" value="5" min="1">
+        </div>
+        
+        <div class="input-group">
+            <label>颜色数量:</label>
+            <input type="number" id="colorCount" value="2" min="2" max="6">
+        </div>
+        
+        <button onclick="startTraining()">开始训练</button>
+    </div>
+    <div id="countdown"></div>
+
+    <script>
+        let intervalId;
+        let currentCount = 0;
+        let lastColors = [];
+        const MAX_REPEAT = 2;
+        const HUES = [0, 60, 120, 180, 240, 300]; // 红、黄、绿、青、蓝、品红
+
+        // 页面加载初始化
+        window.onload = () => {
+            document.getElementById('controls').classList.remove('hidden');
+        }
+
+        // 生成高对比度颜色
+        function generateColors(count) {
+            const baseHue = HUES[Math.floor(Math.random() * HUES.length)];
+            
+            if (count === 2) {
+                return [
+                    `hsl(${baseHue}, 100%, 50%)`,
+                    `hsl(${(baseHue + 180) % 360}, 100%, 50%)`
+                ].sort(() => Math.random() - 0.5);
+            }
+
+            const colors = [];
+            while (colors.length < count) {
+                const hue = (baseHue + Math.floor(Math.random() * 120)) % 360;
+                const color = `hsl(${hue}, 100%, 50%)`;
+                if (!colors.includes(color)) colors.push(color);
+            }
+            return colors;
+        }
+
+        // 智能颜色选择
+        function getNextColor(colors) {
+            // 如果最近2次颜色相同，强制切换
+            if (lastColors.length >= MAX_REPEAT && 
+                lastColors.slice(-MAX_REPEAT).every(c => c === lastColors[0])) {
+                const newColor = colors.find(c => c !== lastColors[0]);
+                lastColors = [newColor];
+                return newColor;
+            }
+
+            // 70%概率切换颜色
+            if (Math.random() < 0.7 && lastColors.length > 0) {
+                const available = colors.filter(c => c !== lastColors[lastColors.length-1]);
+                const newColor = available[Math.floor(Math.random() * available.length)];
+                lastColors.push(newColor);
+                return newColor;
+            }
+            
+            // 保持或随机选择
+            const newColor = lastColors.length > 0 
+                ? lastColors[lastColors.length-1]
+                : colors[Math.floor(Math.random() * colors.length)];
+            
+            lastColors.push(newColor);
+            return newColor;
+        }
+
+        function startTraining() {
+            const totalSeconds = parseInt(document.getElementById('interval').value);
+            const colorCount = Math.min(6, parseInt(document.getElementById('colorCount').value));
+            const colors = generateColors(colorCount);
+            
+            document.getElementById('controls').classList.add('hidden');
+            document.body.style.transition = 'background-color 0s';
+            lastColors = [];
+            
+            startCycle(totalSeconds, colors);
+        }
+
+        function startCycle(seconds, colors) {
+            currentCount = seconds;
+            
+            const newColor = getNextColor(colors);
+            document.body.style.backgroundColor = newColor;
+            document.getElementById('countdown').textContent = currentCount;
+
+            const countdownInterval = setInterval(() => {
+                currentCount--;
+                document.getElementById('countdown').textContent = currentCount;
+                
+                if (currentCount <= 0) {
+                    clearInterval(countdownInterval);
+                    showGrayScreen(colors);
+                }
+            }, 1000);
+        }
+
+        function showGrayScreen(colors) {
+            document.body.style.backgroundColor = '#808080';
+            document.getElementById('countdown').textContent = '';
+            
+            setTimeout(() => {
+                const totalSeconds = parseInt(document.getElementById('interval').value);
+                document.body.style.transition = 'background-color 1s';
+                startCycle(totalSeconds, colors);
+            }, 1000);
+        }
+
+        // 点击返回设置
+        document.body.addEventListener('click', (e) => {
+            const controls = document.getElementById('controls');
+            if (controls.classList.contains('hidden')) {
+                clearInterval(intervalId);
+                document.body.style.backgroundColor = 'white';
+                document.getElementById('countdown').textContent = '';
+                //controls.classList.remove('hidden');
+                lastColors = [];
+            }
+        });
+    </script>
+</body>
+</html>
