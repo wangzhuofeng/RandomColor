@@ -86,7 +86,7 @@
         
         <div class="input-group">
             <label>颜色数量:</label>
-            <input type="number" id="colorCount" value="2" min="2" max="6">
+            <input type="number" id="colorCount" value="2" min="2" max="5">
         </div>
         
         <button onclick="startTraining()">开始训练</button>
@@ -98,36 +98,28 @@
         let currentCount = 0;
         let lastColors = [];
         const MAX_REPEAT = 2;
-        const HUES = [0, 60, 120, 180, 240, 300]; // 红、黄、绿、青、蓝、品红
 
-        // 页面加载初始化
+        // 预定义颜色集合
+        const COLOR_SETS = {
+            2: ['#FF0000', '#00FF00'], // 红、绿
+            3: ['#FF0000', '#00FF00', '#FFFF00'], // 红、绿、黄
+            4: ['#FF0000', '#00FF00', '#FFFF00', '#0000FF'], // 红、绿、黄、蓝
+            5: ['#FF0000', '#00FF00', '#FFFF00', '#0000FF', '#800080'] // 红、绿、黄、蓝、紫
+        };
+
         window.onload = () => {
             document.getElementById('controls').classList.remove('hidden');
         }
 
-        // 生成高对比度颜色
+        // 生成固定颜色组合
         function generateColors(count) {
-            const baseHue = HUES[Math.floor(Math.random() * HUES.length)];
-            
-            if (count === 2) {
-                return [
-                    `hsl(${baseHue}, 100%, 50%)`,
-                    `hsl(${(baseHue + 180) % 360}, 100%, 50%)`
-                ].sort(() => Math.random() - 0.5);
-            }
-
-            const colors = [];
-            while (colors.length < count) {
-                const hue = (baseHue + Math.floor(Math.random() * 120)) % 360;
-                const color = `hsl(${hue}, 100%, 50%)`;
-                if (!colors.includes(color)) colors.push(color);
-            }
-            return colors;
+            count = Math.max(2, Math.min(5, count)); // 限制2-5种颜色
+            return COLOR_SETS[count].slice(); // 返回副本避免污染原数组
         }
 
         // 智能颜色选择
         function getNextColor(colors) {
-            // 如果最近2次颜色相同，强制切换
+            // 强制切换规则
             if (lastColors.length >= MAX_REPEAT && 
                 lastColors.slice(-MAX_REPEAT).every(c => c === lastColors[0])) {
                 const newColor = colors.find(c => c !== lastColors[0]);
@@ -135,8 +127,8 @@
                 return newColor;
             }
 
-            // 70%概率切换颜色
-            if (Math.random() < 0.7 && lastColors.length > 0) {
+            // 60%概率切换颜色
+            if (Math.random() < 0.6 && lastColors.length > 0) {
                 const available = colors.filter(c => c !== lastColors[lastColors.length-1]);
                 const newColor = available[Math.floor(Math.random() * available.length)];
                 lastColors.push(newColor);
@@ -154,7 +146,7 @@
 
         function startTraining() {
             const totalSeconds = parseInt(document.getElementById('interval').value);
-            const colorCount = Math.min(6, parseInt(document.getElementById('colorCount').value));
+            const colorCount = parseInt(document.getElementById('colorCount').value);
             const colors = generateColors(colorCount);
             
             document.getElementById('controls').classList.add('hidden');
